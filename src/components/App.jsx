@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import contactsTemplate from '../data/contactsTemplate.json';
 import Filter from './Filter/Filter';
@@ -8,105 +8,95 @@ import MainTitle from './MainTitle/MainTitle';
 
 const CONTACTS = JSON.parse(localStorage.getItem('CONTACTS'));
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-    isInitializedTemplate: false,
-  };
+export const App = () => {
+  const [contacts, setContacts] = useState(CONTACTS ?? []);
+  const [filter, setFilter] = useState('');
+  const [isInitializedTemplate, setIsInitializedTemplate] = useState(
+    CONTACTS && CONTACTS.length > 0 ? true : false
+  );
+  const [timer, setTimer] = useState(3);
 
-  componentDidMount() {
-    if (CONTACTS && CONTACTS.length > 0) {
-      this.setState({
-        isInitializedTemplate: true,
-        contacts: CONTACTS,
-      });
-    } else {
+  useEffect(() => {
+    if (!isInitializedTemplate) {
       setTimeout(() => {
-        this.setState({
-          isInitializedTemplate: true,
-          contacts: contactsTemplate,
-        });
-      }, 4000);
+        setContacts(contactsTemplate);
+        setIsInitializedTemplate(true);
+      }, 3000);
     }
-  }
+  }, [isInitializedTemplate]);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.contacts !== this.state.contacts) {
-      localStorage.setItem('CONTACTS', JSON.stringify(this.state.contacts));
+  useEffect(() => {
+    if (timer > 0) {
+      const interval = setInterval(() => {
+        setTimer(prevTimer => prevTimer - 1);
+      }, 1000);
+
+      return () => clearInterval(interval);
     }
-  }
+  }, [timer]);
+  // useEffect(() => {
+  //   window.localStorage.setItem(
+  //     'isInitializedTemplate',
+  //     JSON.stringify(isInitializedTemplate)
+  //   );
+  // }, [isInitializedTemplate]);
 
-  addNewContacts = (name, number) => {
+  useEffect(() => {
+    window.localStorage.setItem('CONTACTS', JSON.stringify(contacts));
+  }, [contacts]);
+
+  const addNewContacts = (name, number) => {
     const showAlert = true;
     const similarElement = element => element.name === name;
-    if (
-      // this.state.contacts.filter(contact => contact.name === name).length !== 0 // мій метод пошуку подібного ім'я через фільтр // не кращій варіант
-      // this.state.contacts.some(contact => contact.name === name) // знайшов some, який перебирає масив і повертає true або false, не мутує вихідний масив
-      // this.state.contacts.some(similarElement)
-
-      this.state.contacts.find(similarElement)
-    ) {
+    if (contacts.find(similarElement)) {
       alert(name + ' is already in contacts.');
       return showAlert;
     }
 
-    this.setState(prevState => ({
-      contacts: [{ id: nanoid(), name, number }, ...prevState.contacts],
-    }));
+    setContacts(prevState => [{ id: nanoid(), name, number }, ...prevState]);
   };
 
-  handlerInputFilter = e => {
+  const handlerInputFilter = e => {
     const { value } = e.target;
-    this.setState({ filter: value });
+    setFilter(value);
   };
 
-  handlerButtonDelete = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
+  const handlerButtonDelete = id => {
+    setContacts(prevState => prevState.filter(contact => contact.id !== id));
   };
 
-  filterContacts = () => {
-    const { contacts, filter } = this.state;
+  const filterContacts = () => {
     const lowerCaseFilter = filter.toLowerCase();
-
     return contacts.filter(contact =>
       contact.name.toLowerCase().includes(lowerCaseFilter)
     );
   };
 
-  render() {
-    const filterContacts = this.filterContacts();
+  return (
+    <div className="container">
+      <MainTitle title="Phonebook" />
+      <ContactForm addNewContacts={addNewContacts} />
+      <MainTitle title="Contacts" />
+      <Filter onChange={handlerInputFilter} filterValue={filter} />
 
-    return (
-      <div className="container">
-        <MainTitle title="Phonebook" />
-        <ContactForm addNewContacts={this.addNewContacts} />
-        <MainTitle title="Contacts" />
-        <Filter
-          onChange={this.handlerInputFilter}
-          filterValue={this.state.filter}
+      {isInitializedTemplate ? (
+        <ContactList
+          contacts={filterContacts()}
+          onButtonDelete={handlerButtonDelete}
         />
-
-        {this.state.isInitializedTemplate ? (
-          <ContactList
-            contacts={filterContacts}
-            onButtonDelete={this.handlerButtonDelete}
-          />
-        ) : (
-          <>
-            <p>
-              You don't have any saved contacts, templates for contacts will be
-              loaded...
-            </p>
-            <p>
-              Ви не маєте збережених контактів, будуть завантажені шаблони
-              контактів...
-            </p>
-          </>
-        )}
-      </div>
-    );
-  }
-}
+      ) : (
+        <>
+          <p>
+            You don't have any saved contacts, templates for contacts will be
+            loaded
+          </p>
+          <p>
+            Ви не маєте збережених контактів, будуть завантажені шаблони
+            контактів
+          </p>
+          <p>{timer}</p>
+        </>
+      )}
+    </div>
+  );
+};

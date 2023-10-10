@@ -14,10 +14,11 @@ export const App = () => {
   const [isInitializedTemplate, setIsInitializedTemplate] = useState(
     CONTACTS && CONTACTS.length > 0 ? true : false
   );
-  const [timer, setTimer] = useState(3);
+  const [timer, setTimer] = useState(0);
 
   useEffect(() => {
     if (!isInitializedTemplate) {
+      setTimer(3);
       setTimeout(() => {
         setContacts(contactsTemplate);
         setIsInitializedTemplate(true);
